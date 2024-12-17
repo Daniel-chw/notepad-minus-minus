@@ -80,6 +80,8 @@ int main(int argc, char* argv[]) {
 	int maxWidth = 570;
 
 	bool curserVisible = true;
+	int curserPosition = 0;
+	int curserLine = 0;
 
 	bool running = true;
 	SDL_Event e;
@@ -104,17 +106,19 @@ int main(int argc, char* argv[]) {
 					bool shiftActive = (modState & KMOD_SHIFT);
 					bool capsActive = (modState & KMOD_CAPS);
 
-					// Shift-modified numbers
+					// Shift Chars
 					if (shiftActive && shiftSymbols.find(static_cast<SDL_KeyCode>(e.key.keysym.sym)) != shiftSymbols.end()) {
 						keyPressed = shiftSymbols[static_cast<SDL_KeyCode>(e.key.keysym.sym)];
 					}
-
-					// Convert to uppercase if Shift or Caps Lock is active
+					// Upper Case
 					if ((shiftActive ^ capsActive) && keyPressed >= 'a' && keyPressed <= 'z') {
 						keyPressed -= 32; 
 					}
 
-					lines.back() += keyPressed;
+					
+					//lines.back() += keyPressed;
+					lines.back().insert(curserPosition, 1, keyPressed);
+					curserPosition += 1;
 
 					// create new line if width>maxWidth
 					int textWidth;
@@ -122,24 +126,44 @@ int main(int argc, char* argv[]) {
 					TTF_SizeText(font, lines.back().c_str(), &textWidth, &textHeight);
 
 					if (textWidth > maxWidth) {
+						curserPosition = 0;
+						curserLine += 1;
 						lines.push_back("");
 					}
 				}
+
+				// Handles deleting letters
 				else if (e.key.keysym.sym == SDLK_BACKSPACE)
 				{
 					if (lines.back().size() >= 1) {
-						lines.back().pop_back();
+						lines.back().erase(curserPosition-1, 1);
+						curserPosition -= 1;
 					}
 					else if (lines.size() >= 2) {
 						lines.pop_back();
+						curserLine -= 1;
+						curserPosition = lines.back().size();
+						lines.back().erase(curserPosition - 1, 1);
 					}
+				}
 
+				// Handles moving cursor
+				else if (e.key.keysym.sym == SDLK_LEFT) {
+					if (curserPosition >= 1) {
+						curserPosition -= 1;
+					}
+				}
+				else if (e.key.keysym.sym == SDLK_RIGHT) {
+					if (curserPosition < lines.back().size()) {
+						curserPosition += 1;
+					}
 				}
 			default:
 				break;
 			}
 		}
 
+		std::cout << curserPosition << ", " << curserLine << std::endl;
 
 		// draws background
 		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -166,11 +190,12 @@ int main(int argc, char* argv[]) {
 		}
 
 		// curser blinking
-		bool curserVisible = (SDL_GetTicks() / 500) % 2 == 0;
+		bool curserVisible = true;
+		//bool curserVisible = (SDL_GetTicks() / 500) % 2 == 0;
 
 		// draws curser
 		int textWidth, textHeight;
-		TTF_SizeText(font, lines.back().c_str(), &textWidth, &textHeight);
+		TTF_SizeText(font, lines.back().substr(0, curserPosition).c_str(), &textWidth, &textHeight);
 
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		if (textWidth > 0 && curserVisible) {
