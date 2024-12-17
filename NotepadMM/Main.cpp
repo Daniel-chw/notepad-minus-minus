@@ -1,9 +1,10 @@
 #include <SDL.h>
+#include <SDL_render.h>
 #include <SDL_ttf.h>
 #include <iostream>
 #include <string>
 #include <vector>
-#include <SDL_render.h>
+#include <unordered_map>
 
 void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 	if (window) SDL_DestroyWindow(window);
@@ -48,9 +49,36 @@ int main(int argc, char* argv[]) {
 
 
 	// MAIN LOOP
+
+	std::unordered_map<SDL_KeyCode, char> shiftSymbols = {
+		{SDLK_1, '!'},
+		{SDLK_2, '"'},
+		{SDLK_3, '£'}, 
+		{SDLK_4, '$'},
+		{SDLK_5, '%'},
+		{SDLK_6, '^'},
+		{SDLK_7, '&'},
+		{SDLK_8, '*'},
+		{SDLK_9, '('},
+		{SDLK_0, ')'},
+		{SDLK_MINUS, '_'},
+		{SDLK_EQUALS, '+'},
+		{SDLK_LEFTBRACKET, '{'},
+		{SDLK_RIGHTBRACKET, '}'},
+		{SDLK_SEMICOLON, ':'},
+		{SDLK_QUOTE, '@'}, 
+		{SDLK_BACKSLASH, '|'}, 
+		{SDLK_COMMA, '<'},
+		{SDLK_PERIOD, '>'}, 
+		{SDLK_SLASH, '?'},
+		{SDLK_BACKQUOTE, '¬'},
+		{SDLK_HASH,'~'}
+	};
+
 	std::vector<std::string> lines = {""};
 	int lineSpacing = 0;
 	int maxWidth = 570;
+
 	bool curserVisible = true;
 
 	bool running = true;
@@ -63,10 +91,28 @@ int main(int argc, char* argv[]) {
 				running = false;
 				break;
 			case SDL_KEYDOWN:
+
 				// If any key is pressed, convert that to a string and concat that with initial text
+
 				if (e.key.keysym.sym >= SDLK_SPACE && e.key.keysym.sym <= SDLK_z) {
+					
 					// appends letter to last line
 					char keyPressed = static_cast<char>(e.key.keysym.sym);
+
+					// Check if Shift or Caps Lock is active
+					SDL_Keymod modState = SDL_GetModState();
+					bool shiftActive = (modState & KMOD_SHIFT) || (modState & KMOD_CAPS);
+
+					// Shift-modified numbers
+					if (shiftActive && shiftSymbols.find(static_cast<SDL_KeyCode>(e.key.keysym.sym)) != shiftSymbols.end()) {
+						keyPressed = shiftSymbols[static_cast<SDL_KeyCode>(e.key.keysym.sym)];
+					}
+
+					// Convert to uppercase if Shift or Caps Lock is active
+					if (shiftActive && keyPressed >= 'a' && keyPressed <= 'z') {
+						keyPressed -= 32; 
+					}
+
 					lines.back() += keyPressed;
 
 					// create new line if width>maxWidth
