@@ -101,7 +101,8 @@ int main(int argc, char* argv[]) {
 
 					// Check if Shift or Caps Lock is active
 					SDL_Keymod modState = SDL_GetModState();
-					bool shiftActive = (modState & KMOD_SHIFT) || (modState & KMOD_CAPS);
+					bool shiftActive = (modState & KMOD_SHIFT);
+					bool capsActive = (modState & KMOD_CAPS);
 
 					// Shift-modified numbers
 					if (shiftActive && shiftSymbols.find(static_cast<SDL_KeyCode>(e.key.keysym.sym)) != shiftSymbols.end()) {
@@ -109,7 +110,7 @@ int main(int argc, char* argv[]) {
 					}
 
 					// Convert to uppercase if Shift or Caps Lock is active
-					if (shiftActive && keyPressed >= 'a' && keyPressed <= 'z') {
+					if ((shiftActive ^ capsActive) && keyPressed >= 'a' && keyPressed <= 'z') {
 						keyPressed -= 32; 
 					}
 
