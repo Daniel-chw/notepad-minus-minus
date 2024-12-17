@@ -45,6 +45,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	SDL_Color green = { 0, 0, 255, 255 };
+	SDL_Color gutterGrey = { 150, 150, 150, 255 };
 	SDL_Texture* textTexture = nullptr;
 
 
@@ -75,9 +76,12 @@ int main(int argc, char* argv[]) {
 		{SDLK_HASH,'~'}
 	};
 
+	int gutterWidth = 30;
+	int gutterIncreaseCorrection = 0;
+
 	std::vector<std::string> lines = {""};
 	int lineSpacing = 0;
-	int maxWidth = 570;
+	int maxWidth = 570-gutterWidth;
 
 	bool curserVisible = true;
 	int curserPosition = 0;
@@ -112,31 +116,35 @@ int main(int argc, char* argv[]) {
 					}
 					// Upper Case
 					if ((shiftActive ^ capsActive) && keyPressed >= 'a' && keyPressed <= 'z') {
-						keyPressed -= 32; 
+						keyPressed -= 32;
 					}
 
-					
+
 					//lines.back() += keyPressed;
 					lines.back().insert(curserPosition, 1, keyPressed);
 					curserPosition += 1;
 
-					// create new line if width>maxWidth
-					int textWidth;
-					int textHeight;
-					TTF_SizeText(font, lines.back().c_str(), &textWidth, &textHeight);
 
+					/////////////////////////
+
+					int textWidth, textHeight;
+					TTF_SizeText(font, lines[curserLine].c_str(), &textWidth, &textHeight);
 					if (textWidth > maxWidth) {
+
 						curserPosition = 0;
 						curserLine += 1;
 						lines.push_back("");
 					}
+
+
+					//////////////////////////
 				}
 
 				// Handles deleting letters
 				else if (e.key.keysym.sym == SDLK_BACKSPACE)
 				{
 					if (lines.back().size() >= 1) {
-						lines.back().erase(curserPosition-1, 1);
+						lines.back().erase(curserPosition - 1, 1);
 						curserPosition -= 1;
 					}
 					else if (lines.size() >= 2) {
@@ -163,11 +171,19 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		std::cout << curserPosition << ", " << curserLine << std::endl;
+		//std::cout << curserPosition << ", " << lines.back().size() << std::endl;
 
 		// draws background
 		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 		SDL_RenderClear(renderer);
+
+		// draws gutter
+		SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255); // Light gray
+		SDL_Rect gutterRect = { 0, 0, gutterWidth, 400 };
+		SDL_RenderFillRect(renderer, &gutterRect);
+
+
+
 
 		// draws char on each line of vector
 		int yOffset = 10;
@@ -179,7 +195,7 @@ int main(int argc, char* argv[]) {
 				SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
 
 				// Renders Text into a box
-				SDL_Rect textRect = { 10, yOffset, textSurface->w, textSurface->h };
+				SDL_Rect textRect = { 10 + gutterWidth, yOffset, textSurface->w, textSurface->h };
 				SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
 
 				yOffset += textSurface->h + lineSpacing;
@@ -188,6 +204,24 @@ int main(int argc, char* argv[]) {
 			}
 			SDL_FreeSurface(textSurface);
 		}
+
+
+		// gutter text
+		for (int i = 0; i < lines.size(); i++) {
+			int textWidth, textHeight;
+			TTF_SizeText(font, std::to_string(i).c_str(), &textWidth, &textHeight);
+
+			if ((textWidth+5) > gutterWidth) {
+				gutterWidth += 5;
+				maxWidth -= 5;
+			}
+
+			SDL_Surface* textSurface = TTF_RenderText_Blended(font, std::to_string(i).c_str(), gutterGrey);
+			SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+			SDL_Rect textRect = { gutterWidth - textWidth-5, textHeight*(i) + 10,textSurface->w, textSurface->h};
+			SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
+		}
+
 
 		// curser blinking
 		bool curserVisible = true;
@@ -199,9 +233,8 @@ int main(int argc, char* argv[]) {
 
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		if (textWidth > 0 && curserVisible) {
-			SDL_RenderDrawLine(renderer, textWidth + 10, yOffset - textHeight, textWidth + 10, yOffset);
+			SDL_RenderDrawLine(renderer, textWidth + 10 + gutterWidth, yOffset - textHeight, textWidth + 10 + gutterWidth, yOffset);
 		}
-
 		
 
 		// updates screen
