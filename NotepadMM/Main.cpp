@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
+#include <SDL_render.h>
 
 void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 	if (window) SDL_DestroyWindow(window);
@@ -26,6 +26,7 @@ int main(int argc, char* argv[]) {
 		SDL_Quit();
 		return -1;
 	}
+
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	if (!renderer) {
 		std::cout << "Failed to create renderer! Error: " << SDL_GetError() << std::endl;
@@ -36,7 +37,7 @@ int main(int argc, char* argv[]) {
 	TTF_Init();
 
 	// Create a font and colour
-	TTF_Font* font = TTF_OpenFont("arial.ttf", 24);
+	TTF_Font* font = TTF_OpenFont("Consolas.ttf", 24);
 	if (!font) {
 		std::cout << "Failed to load font! Error:" << TTF_GetError() << std::endl;
 		cleanup(window, renderer, nullptr);
@@ -50,6 +51,7 @@ int main(int argc, char* argv[]) {
 	std::vector<std::string> lines = {""};
 	int lineSpacing = 0;
 	int maxWidth = 570;
+	bool curserVisible = true;
 
 	bool running = true;
 	SDL_Event e;
@@ -93,7 +95,7 @@ int main(int argc, char* argv[]) {
 
 
 		// draws background
-		SDL_SetRenderDrawColor(renderer, 188, 255, 255, 255);
+		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 		SDL_RenderClear(renderer);
 
 		// draws char on each line of vector
@@ -115,6 +117,20 @@ int main(int argc, char* argv[]) {
 			}
 			SDL_FreeSurface(textSurface);
 		}
+
+		// curser blinking
+		bool curserVisible = (SDL_GetTicks() / 500) % 2 == 0;
+
+		// draws curser
+		int textWidth, textHeight;
+		TTF_SizeText(font, lines.back().c_str(), &textWidth, &textHeight);
+
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		if (textWidth > 0 && curserVisible) {
+			SDL_RenderDrawLine(renderer, textWidth + 10, yOffset - textHeight, textWidth + 10, yOffset);
+		}
+
+		
 
 		// updates screen
 		SDL_RenderPresent(renderer);
