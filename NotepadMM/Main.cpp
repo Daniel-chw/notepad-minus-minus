@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
 		{SDLK_SLASH, '?'},
 		{SDLK_BACKQUOTE, '¬'},
 		{SDLK_HASH,'~'},
-		{SDLK_RETURN, '+'}
+		{SDLK_RETURN, '+'},
 	};
 	bool shiftActive = false;
 
@@ -113,6 +113,10 @@ int main(int argc, char* argv[]) {
 					curserLine += 1;
 					curserPosition = 0;
 					lines.insert(lines.begin() + curserLine, ""); // Insert a new line at the cursor line
+				}
+				if (e.key.keysym.sym == SDLK_TAB) {
+					lines[curserLine].insert(curserPosition, "    ");
+					curserPosition += 4;
 				}
 
 				// If any key is pressed, convert that to a string and concat that with initial text
@@ -213,7 +217,7 @@ int main(int argc, char* argv[]) {
 
 				if (e.wheel.y > 0) {
 					if (shiftActive) {
-						scrollOffsetX -= scrollSpeed;
+						scrollOffsetX -= scrollSpeed/2;
 					}
 					else {
 						scrollOffsetY += scrollSpeed; // Regular Scroll Up
@@ -221,7 +225,7 @@ int main(int argc, char* argv[]) {
 				}
 				else if (e.wheel.y < 0) {
 					if (shiftActive) {
-						scrollOffsetX += scrollSpeed;
+						scrollOffsetX += scrollSpeed/2;
 					}
 					else {
 						scrollOffsetY -= scrollSpeed; // Regular Scroll Down
