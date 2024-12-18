@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <utility>
 #include <functional>
+#include <fstream>
+#include <filesystem>
 
 void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 	if (window) SDL_DestroyWindow(window);
@@ -17,9 +19,21 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 	SDL_Quit();
 }
 
-void saveFile() {
+std::string currentFileName = "";
+void saveFile(std::vector<std::string>& lines, std::string& currentFileName) {
 
-	std::cout << "s" << std::endl;
+	if (currentFileName.size() == 0) {
+		std::cout << "Enter file name to save as: ";
+		std::cin >> currentFileName;
+	}
+
+	std::ofstream currentFile(currentFileName);
+
+	for (const auto& line : lines) {
+		currentFile << line << "\n";
+	}
+
+	currentFile.close();
 
 }
 void openFile() {
@@ -33,8 +47,6 @@ void copyText() {
 
 }
 void pasteText(std::vector<std::string>& lines, int& curserLine, int& curserPosition) {
-
-	std::cout << "p" << std::endl;
 
 	char* clipboardText = SDL_GetClipboardText();
 	std::string textToPaste(clipboardText);
@@ -138,7 +150,7 @@ int main(int argc, char* argv[]) {
 	int curserLine = 0;
 
 	std::unordered_map<SDL_KeyCode, std::function<void()>> ctrlKeyActions = {
-		{SDLK_s, saveFile},     // Ctrl+S
+		{SDLK_s, [&]() { saveFile(lines, currentFileName); }},     // Ctrl+S
 		{SDLK_o, openFile},     // Ctrl+O
 		{SDLK_c, copyText},     // Ctrl+C
 		{SDLK_v, [&]() { pasteText(lines, curserLine, curserPosition); }}
