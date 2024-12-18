@@ -163,10 +163,20 @@ int main(int argc, char* argv[]) {
 					if (curserPosition >= 1) {
 						curserPosition -= 1;
 					}
+					else if(curserLine >= 1)
+					{
+						curserLine -= 1;
+						curserPosition = lines[curserLine].size();
+					}
 				}
 				else if (e.key.keysym.sym == SDLK_RIGHT) {
 					if (curserPosition < lines[curserLine].size()) {
 						curserPosition += 1;
+					}
+					else if(curserLine < lines.size() - 1)
+					{
+						curserLine += 1;
+						curserPosition = 0;
 					}
 				}
 				break;
