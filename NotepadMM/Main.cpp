@@ -1,4 +1,4 @@
-#include <SDL.h>
+ï»¿#include <SDL.h>
 #include <SDL_render.h>
 #include <SDL_ttf.h>
 #include <iostream>
@@ -29,6 +29,17 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
+	SDL_Surface* iconSurface = SDL_LoadBMP("NotepadMMIcon.bmp");
+	if (!iconSurface) {
+		std::cerr << "Failed to load icon! Error: " << SDL_GetError() << std::endl;
+	}
+	else {
+		SDL_SetWindowIcon(window, iconSurface);
+		SDL_FreeSurface(iconSurface); // Free the surface after setting it as an icon
+	}
+
+
+
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	if (!renderer) {
 		std::cout << "Failed to create renderer! Error: " << SDL_GetError() << std::endl;
@@ -55,7 +66,7 @@ int main(int argc, char* argv[]) {
 	std::unordered_map<SDL_KeyCode, char> shiftSymbols = {
 		{SDLK_1, '!'},
 		{SDLK_2, '"'},
-		{SDLK_3, '£'}, 
+		{SDLK_3, 'Â£'}, 
 		{SDLK_4, '$'},
 		{SDLK_5, '%'},
 		{SDLK_6, '^'},
@@ -73,7 +84,7 @@ int main(int argc, char* argv[]) {
 		{SDLK_COMMA, '<'},
 		{SDLK_PERIOD, '>'}, 
 		{SDLK_SLASH, '?'},
-		{SDLK_BACKQUOTE, '¬'},
+		{SDLK_BACKQUOTE, 'Â¬'},
 		{SDLK_HASH,'~'},
 		{SDLK_RETURN, '+'},
 	};
