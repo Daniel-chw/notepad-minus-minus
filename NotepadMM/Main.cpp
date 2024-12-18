@@ -77,8 +77,10 @@ int main(int argc, char* argv[]) {
 		{SDLK_HASH,'~'},
 		{SDLK_RETURN, '+'}
 	};
+	bool shiftActive = false;
 
 	int scrollOffsetY = 0;
+	int scrollOffsetX = 0;
 	int yOffset;
 
 	int gutterWidth = 30;
@@ -122,7 +124,7 @@ int main(int argc, char* argv[]) {
 
 					// Check if Shift or Caps Lock is active
 					SDL_Keymod modState = SDL_GetModState();
-					bool shiftActive = (modState & KMOD_SHIFT);
+					shiftActive = (modState & KMOD_SHIFT);
 					bool capsActive = (modState & KMOD_CAPS);
 
 					// Shift Chars
@@ -170,23 +172,37 @@ int main(int argc, char* argv[]) {
 				break;
 
 			case SDL_MOUSEWHEEL:
+				// Check if Shift is pressed
+				shiftActive = (SDL_GetModState() & KMOD_SHIFT);
 
-				// Check if Shift is active
-				//SDL_Keymod modState = SDL_GetModState();
-				// (modState& KMOD_SHIFT);
+				int textWidth, textHeight;
+				TTF_SizeText(font, lines[curserLine].c_str(), &textWidth, &textHeight);
 
 				if (e.wheel.y > 0) {
-					scrollOffsetY += 10; // Scroll up
+					if (shiftActive) {
+						scrollOffsetX -= 10;
+					}
+					else {
+						scrollOffsetY += 10; // Regular Scroll Up
+					}
 				}
 				else if (e.wheel.y < 0) {
-					scrollOffsetY -= 10; // Scroll down
+					if (shiftActive) {
+						scrollOffsetX += 10;
+					}
+					else {
+						scrollOffsetY -= 10; // Regular Scroll Down
+					}
 				}
 
-
+				// Clamp the scroll offset to prevent scrolling beyond bounds
 				scrollOffsetY = std::min(scrollOffsetY, 0);
+				scrollOffsetX = std::min(scrollOffsetX, 0);
 
-				std::cout << scrollOffsetY << std::endl;
+				//std::cout << textWidth << std::endl;
+				//std::cout << "Scroll Offset X: " << scrollOffsetX << std::endl;
 				break;
+
 
 			default:
 				break;
@@ -199,13 +215,6 @@ int main(int argc, char* argv[]) {
 		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 		SDL_RenderClear(renderer);
 
-		// draws gutter
-		SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255); // Light gray
-		SDL_Rect gutterRect = { 0, 0, gutterWidth, 400 };
-		SDL_RenderFillRect(renderer, &gutterRect);
-
-
-
 
 		// draws char on each line of vector
 		int yOffset = 10;
@@ -217,7 +226,7 @@ int main(int argc, char* argv[]) {
 				SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
 
 				// Renders Text into a box
-				SDL_Rect textRect = { 10 + gutterWidth, yOffset + scrollOffsetY, textSurface->w, textSurface->h };
+				SDL_Rect textRect = { 10 + gutterWidth + scrollOffsetX, yOffset + scrollOffsetY, textSurface->w, textSurface->h };
 				SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
 
 				yOffset += textSurface->h + lineSpacing;
@@ -227,6 +236,10 @@ int main(int argc, char* argv[]) {
 			SDL_FreeSurface(textSurface);
 		}
 
+		// draws gutter
+		SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255); // Light gray
+		SDL_Rect gutterRect = { 0, 0, gutterWidth, 400 };
+		SDL_RenderFillRect(renderer, &gutterRect);
 
 		// gutter text
 		for (int i = 0; i < lines.size(); i++) {
@@ -255,7 +268,7 @@ int main(int argc, char* argv[]) {
 
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		if (textWidth > 0 && curserVisible) {
-			SDL_RenderDrawLine(renderer, textWidth + 10 + gutterWidth, yOffset - textHeight + scrollOffsetY, textWidth + 10 + gutterWidth, yOffset + scrollOffsetY);
+			SDL_RenderDrawLine(renderer, textWidth + 10 + gutterWidth + scrollOffsetX, yOffset - textHeight + scrollOffsetY, textWidth + 10 + gutterWidth + scrollOffsetX, yOffset + scrollOffsetY);
 		}
 		
 
