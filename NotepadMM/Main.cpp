@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <utility>
 
 void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 	if (window) SDL_DestroyWindow(window);
@@ -73,8 +74,12 @@ int main(int argc, char* argv[]) {
 		{SDLK_PERIOD, '>'}, 
 		{SDLK_SLASH, '?'},
 		{SDLK_BACKQUOTE, '¬'},
-		{SDLK_HASH,'~'}
+		{SDLK_HASH,'~'},
+		{SDLK_RETURN, '+'}
 	};
+
+	int scrollOffsetY = 0;
+	int yOffset;
 
 	int gutterWidth = 30;
 	int gutterIncreaseCorrection = 0;
@@ -91,6 +96,9 @@ int main(int argc, char* argv[]) {
 	SDL_Event e;
 	while (running) {
 
+		int lineHeight = TTF_FontHeight(font);
+		int maxContentHeight = lines.size() * lineHeight;
+
 		while (SDL_PollEvent(&e)) {
 			switch (e.type) {
 			case SDL_QUIT:
@@ -98,9 +106,16 @@ int main(int argc, char* argv[]) {
 				break;
 			case SDL_KEYDOWN:
 
+				if (e.key.keysym.sym == SDLK_RETURN) {
+					// Move to a new line
+					curserPosition = 0;
+					curserLine += 1;
+					lines.push_back("");
+				}
+
 				// If any key is pressed, convert that to a string and concat that with initial text
 
-				if (e.key.keysym.sym >= SDLK_SPACE && e.key.keysym.sym <= SDLK_z) {
+				else if (e.key.keysym.sym >= SDLK_SPACE && e.key.keysym.sym <= SDLK_z) {
 					
 					// appends letter to last line
 					char keyPressed = static_cast<char>(e.key.keysym.sym);
@@ -124,20 +139,6 @@ int main(int argc, char* argv[]) {
 					lines.back().insert(curserPosition, 1, keyPressed);
 					curserPosition += 1;
 
-
-					/////////////////////////
-
-					int textWidth, textHeight;
-					TTF_SizeText(font, lines[curserLine].c_str(), &textWidth, &textHeight);
-					if (textWidth > maxWidth) {
-
-						curserPosition = 0;
-						curserLine += 1;
-						lines.push_back("");
-					}
-
-
-					//////////////////////////
 				}
 
 				// Handles deleting letters
@@ -166,6 +167,27 @@ int main(int argc, char* argv[]) {
 						curserPosition += 1;
 					}
 				}
+				break;
+
+			case SDL_MOUSEWHEEL:
+
+				// Check if Shift is active
+				//SDL_Keymod modState = SDL_GetModState();
+				// (modState& KMOD_SHIFT);
+
+				if (e.wheel.y > 0) {
+					scrollOffsetY += 10; // Scroll up
+				}
+				else if (e.wheel.y < 0) {
+					scrollOffsetY -= 10; // Scroll down
+				}
+
+
+				scrollOffsetY = std::min(scrollOffsetY, 0);
+
+				std::cout << scrollOffsetY << std::endl;
+				break;
+
 			default:
 				break;
 			}
@@ -195,7 +217,7 @@ int main(int argc, char* argv[]) {
 				SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
 
 				// Renders Text into a box
-				SDL_Rect textRect = { 10 + gutterWidth, yOffset, textSurface->w, textSurface->h };
+				SDL_Rect textRect = { 10 + gutterWidth, yOffset + scrollOffsetY, textSurface->w, textSurface->h };
 				SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
 
 				yOffset += textSurface->h + lineSpacing;
@@ -218,7 +240,7 @@ int main(int argc, char* argv[]) {
 
 			SDL_Surface* textSurface = TTF_RenderText_Blended(font, std::to_string(i).c_str(), gutterGrey);
 			SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
-			SDL_Rect textRect = { gutterWidth - textWidth-5, textHeight*(i) + 10,textSurface->w, textSurface->h};
+			SDL_Rect textRect = { gutterWidth - textWidth-5, textHeight*(i) + 10 + scrollOffsetY,textSurface->w, textSurface->h};
 			SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
 		}
 
@@ -233,7 +255,7 @@ int main(int argc, char* argv[]) {
 
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		if (textWidth > 0 && curserVisible) {
-			SDL_RenderDrawLine(renderer, textWidth + 10 + gutterWidth, yOffset - textHeight, textWidth + 10 + gutterWidth, yOffset);
+			SDL_RenderDrawLine(renderer, textWidth + 10 + gutterWidth, yOffset - textHeight + scrollOffsetY, textWidth + 10 + gutterWidth, yOffset + scrollOffsetY);
 		}
 		
 
