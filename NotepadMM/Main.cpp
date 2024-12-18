@@ -82,6 +82,7 @@ int main(int argc, char* argv[]) {
 	int scrollOffsetY = 0;
 	int scrollOffsetX = 0;
 	int yOffset;
+	int scrollSpeed = 50;
 
 	int gutterWidth = 30;
 	int gutterIncreaseCorrection = 0;
@@ -109,10 +110,9 @@ int main(int argc, char* argv[]) {
 			case SDL_KEYDOWN:
 
 				if (e.key.keysym.sym == SDLK_RETURN) {
-					// Move to a new line
-					curserPosition = 0;
 					curserLine += 1;
-					lines.push_back("");
+					curserPosition = 0;
+					lines.insert(lines.begin() + curserLine, ""); // Insert a new line at the cursor line
 				}
 
 				// If any key is pressed, convert that to a string and concat that with initial text
@@ -136,9 +136,7 @@ int main(int argc, char* argv[]) {
 						keyPressed -= 32;
 					}
 
-
-					//lines.back() += keyPressed;
-					lines.back().insert(curserPosition, 1, keyPressed);
+					lines[curserLine].insert(curserPosition, 1, keyPressed);
 					curserPosition += 1;
 
 				}
@@ -146,15 +144,15 @@ int main(int argc, char* argv[]) {
 				// Handles deleting letters
 				else if (e.key.keysym.sym == SDLK_BACKSPACE)
 				{
-					if (lines.back().size() >= 1) {
-						lines.back().erase(curserPosition - 1, 1);
+					if (lines[curserLine].size() >= 1) {
+						lines[curserLine].erase(curserPosition - 1, 1);
 						curserPosition -= 1;
 					}
 					else if (lines.size() >= 2) {
 						lines.pop_back();
 						curserLine -= 1;
-						curserPosition = lines.back().size();
-						lines.back().erase(curserPosition - 1, 1);
+						curserPosition = lines[curserLine].size();
+						lines[curserLine].erase(curserPosition - 1, 1);
 					}
 				}
 
@@ -165,7 +163,7 @@ int main(int argc, char* argv[]) {
 					}
 				}
 				else if (e.key.keysym.sym == SDLK_RIGHT) {
-					if (curserPosition < lines.back().size()) {
+					if (curserPosition < lines[curserLine].size()) {
 						curserPosition += 1;
 					}
 				}
@@ -180,18 +178,18 @@ int main(int argc, char* argv[]) {
 
 				if (e.wheel.y > 0) {
 					if (shiftActive) {
-						scrollOffsetX -= 10;
+						scrollOffsetX -= scrollSpeed;
 					}
 					else {
-						scrollOffsetY += 10; // Regular Scroll Up
+						scrollOffsetY += scrollSpeed; // Regular Scroll Up
 					}
 				}
 				else if (e.wheel.y < 0) {
 					if (shiftActive) {
-						scrollOffsetX += 10;
+						scrollOffsetX += scrollSpeed;
 					}
 					else {
-						scrollOffsetY -= 10; // Regular Scroll Down
+						scrollOffsetY -= scrollSpeed; // Regular Scroll Down
 					}
 				}
 
@@ -217,24 +215,32 @@ int main(int argc, char* argv[]) {
 
 
 		// draws char on each line of vector
-		int yOffset = 10;
-		for (const std::string& line : lines) {
 
-			// Renders text, then converts that into a surface
+		int yOffset = 10 + scrollOffsetY; 
+		for (int i = 0; i < lines.size(); ++i) {
+			const std::string& line = lines[i];
+
+			// Handle empty lines explicitly
+			if (line.empty()) {
+				// Advance yOffset even if the line is empty
+				yOffset += lineHeight + lineSpacing;
+				continue;
+			}
+
 			SDL_Surface* textSurface = TTF_RenderText_Blended(font, line.c_str(), green);
 			if (textSurface) {
 				SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
 
-				// Renders Text into a box
-				SDL_Rect textRect = { 10 + gutterWidth + scrollOffsetX, yOffset + scrollOffsetY, textSurface->w, textSurface->h };
+				SDL_Rect textRect = { 10 + gutterWidth + scrollOffsetX, yOffset, textSurface->w, textSurface->h };
 				SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
-
-				yOffset += textSurface->h + lineSpacing;
 
 				SDL_DestroyTexture(textTexture);
 			}
 			SDL_FreeSurface(textSurface);
+
+			yOffset += lineHeight + lineSpacing; // Move to the next line
 		}
+
 
 		// draws gutter
 		SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255); // Light gray
@@ -263,14 +269,16 @@ int main(int argc, char* argv[]) {
 		//bool curserVisible = (SDL_GetTicks() / 500) % 2 == 0;
 
 		// draws curser
-		int textWidth, textHeight;
-		TTF_SizeText(font, lines.back().substr(0, curserPosition).c_str(), &textWidth, &textHeight);
+		int cursorX = 0, cursorY = curserLine * lineHeight + scrollOffsetY + 10;
+
+		// If the cursor is in the middle of a line, calculate its position
+		if (curserPosition > 0 && !lines[curserLine].empty()) {
+			TTF_SizeText(font, lines[curserLine].substr(0, curserPosition).c_str(), &cursorX, nullptr);
+		}
 
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-		if (textWidth > 0 && curserVisible) {
-			SDL_RenderDrawLine(renderer, textWidth + 10 + gutterWidth + scrollOffsetX, yOffset - textHeight + scrollOffsetY, textWidth + 10 + gutterWidth + scrollOffsetX, yOffset + scrollOffsetY);
-		}
-		
+		SDL_RenderDrawLine(renderer, 10 + gutterWidth + scrollOffsetX + cursorX,cursorY, 10 + gutterWidth + scrollOffsetX + cursorX, cursorY + lineHeight);
+
 
 		// updates screen
 		SDL_RenderPresent(renderer);
