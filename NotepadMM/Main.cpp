@@ -142,19 +142,21 @@ int main(int argc, char* argv[]) {
 				}
 
 				// Handles deleting letters
-				else if (e.key.keysym.sym == SDLK_BACKSPACE)
-				{
-					if (lines[curserLine].size() >= 1) {
+				else if (e.key.keysym.sym == SDLK_BACKSPACE) {
+					if (curserPosition > 0) {
+						// Remove a character from the current line
 						lines[curserLine].erase(curserPosition - 1, 1);
 						curserPosition -= 1;
 					}
-					else if (lines.size() >= 2) {
-						lines.pop_back();
+					else if (curserLine > 0) {
+						// Merge the current line with the previous line
+						curserPosition = lines[curserLine - 1].size();
+						lines[curserLine - 1] += lines[curserLine];
+						lines.erase(lines.begin() + curserLine);
 						curserLine -= 1;
-						curserPosition = lines[curserLine].size();
-						lines[curserLine].erase(curserPosition - 1, 1);
 					}
 				}
+
 
 				// Handles moving cursor
 				else if (e.key.keysym.sym == SDLK_LEFT) {
