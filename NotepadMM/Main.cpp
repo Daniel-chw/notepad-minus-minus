@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include <utility>
+#include <functional>
 
 void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 	if (window) SDL_DestroyWindow(window);
@@ -14,6 +15,35 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 
 	TTF_Quit();
 	SDL_Quit();
+}
+
+void saveFile() {
+
+	std::cout << "s" << std::endl;
+
+}
+void openFile() {
+
+	std::cout << "o" << std::endl;
+
+}
+void copyText() {
+
+	std::cout << "c" << std::endl;
+
+}
+void pasteText(std::vector<std::string>& lines, int& curserLine, int& curserPosition) {
+
+	std::cout << "p" << std::endl;
+
+	char* clipboardText = SDL_GetClipboardText();
+	std::string textToPaste(clipboardText);
+	SDL_free(clipboardText);
+
+	lines[curserLine].insert(curserPosition, textToPaste);
+
+	curserPosition += textToPaste.size();
+
 }
 
 int main(int argc, char* argv[]) {
@@ -63,6 +93,7 @@ int main(int argc, char* argv[]) {
 
 	// MAIN LOOP
 
+
 	std::unordered_map<SDL_KeyCode, char> shiftSymbols = {
 		{SDLK_1, '!'},
 		{SDLK_2, '"'},
@@ -106,6 +137,13 @@ int main(int argc, char* argv[]) {
 	int curserPosition = 0;
 	int curserLine = 0;
 
+	std::unordered_map<SDL_KeyCode, std::function<void()>> ctrlKeyActions = {
+		{SDLK_s, saveFile},     // Ctrl+S
+		{SDLK_o, openFile},     // Ctrl+O
+		{SDLK_c, copyText},     // Ctrl+C
+		{SDLK_v, [&]() { pasteText(lines, curserLine, curserPosition); }}
+	};
+
 	bool running = true;
 	SDL_Event e;
 	while (running) {
@@ -118,27 +156,45 @@ int main(int argc, char* argv[]) {
 			case SDL_QUIT:
 				running = false;
 				break;
-			case SDL_KEYDOWN:
+			case SDL_KEYDOWN: {
+
+				SDL_Keymod modState = SDL_GetModState();
+
+				// RETURN AND TAB
 
 				if (e.key.keysym.sym == SDLK_RETURN) {
 					curserLine += 1;
 					curserPosition = 0;
 					lines.insert(lines.begin() + curserLine, ""); // Insert a new line at the cursor line
 				}
-				if (e.key.keysym.sym == SDLK_TAB) {
+				else if (e.key.keysym.sym == SDLK_TAB) {
 					lines[curserLine].insert(curserPosition, "    ");
 					curserPosition += 4;
 				}
 
+
+				// CTRL KEYS
+				bool ctrlActive = (modState & KMOD_CTRL);
+				if (ctrlActive) {
+					SDL_KeyCode key = static_cast<SDL_KeyCode>(e.key.keysym.sym);
+
+					// Check if the key is in the map
+					if (ctrlKeyActions.find(key) != ctrlKeyActions.end()) {
+						ctrlKeyActions[key](); // Call the corresponding function
+					}
+				}
+
+
+
+				// CHARS
 				// If any key is pressed, convert that to a string and concat that with initial text
 
 				else if (e.key.keysym.sym >= SDLK_SPACE && e.key.keysym.sym <= SDLK_z) {
-					
+
 					// appends letter to last line
 					char keyPressed = static_cast<char>(e.key.keysym.sym);
 
 					// Check if Shift or Caps Lock is active
-					SDL_Keymod modState = SDL_GetModState();
 					shiftActive = (modState & KMOD_SHIFT);
 					bool capsActive = (modState & KMOD_CAPS);
 
@@ -178,7 +234,7 @@ int main(int argc, char* argv[]) {
 					if (curserPosition >= 1) {
 						curserPosition -= 1;
 					}
-					else if(curserLine >= 1)
+					else if (curserLine >= 1)
 					{
 						curserLine -= 1;
 						curserPosition = lines[curserLine].size();
@@ -188,7 +244,7 @@ int main(int argc, char* argv[]) {
 					if (curserPosition < lines[curserLine].size()) {
 						curserPosition += 1;
 					}
-					else if(curserLine < lines.size() - 1)
+					else if (curserLine < lines.size() - 1)
 					{
 						curserLine += 1;
 						curserPosition = 0;
@@ -218,6 +274,7 @@ int main(int argc, char* argv[]) {
 					}
 				}
 				break;
+			}
 
 			case SDL_MOUSEWHEEL:
 				// Check if Shift is pressed
@@ -292,6 +349,19 @@ int main(int argc, char* argv[]) {
 		}
 
 
+		// curser blinking
+		bool curserVisible = true;
+		//bool curserVisible = (SDL_GetTicks() / 500) % 2 == 0;
+
+		// draws curser
+		int cursorX = 0, cursorY = curserLine * lineHeight + scrollOffsetY + 10;
+
+		// If the cursor is in the middle of a line, calculate its position
+		if (curserPosition > 0 && !lines[curserLine].empty()) {
+			TTF_SizeText(font, lines[curserLine].substr(0, curserPosition).c_str(), &cursorX, nullptr);
+		}
+
+
 		// draws gutter
 		SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255); // Light gray
 		SDL_Rect gutterRect = { 0, 0, gutterWidth, 400 };
@@ -311,19 +381,6 @@ int main(int argc, char* argv[]) {
 			SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
 			SDL_Rect textRect = { gutterWidth - textWidth-5, textHeight*(i) + 10 + scrollOffsetY,textSurface->w, textSurface->h};
 			SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
-		}
-
-
-		// curser blinking
-		bool curserVisible = true;
-		//bool curserVisible = (SDL_GetTicks() / 500) % 2 == 0;
-
-		// draws curser
-		int cursorX = 0, cursorY = curserLine * lineHeight + scrollOffsetY + 10;
-
-		// If the cursor is in the middle of a line, calculate its position
-		if (curserPosition > 0 && !lines[curserLine].empty()) {
-			TTF_SizeText(font, lines[curserLine].substr(0, curserPosition).c_str(), &cursorX, nullptr);
 		}
 
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
