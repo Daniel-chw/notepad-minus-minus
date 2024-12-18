@@ -179,6 +179,29 @@ int main(int argc, char* argv[]) {
 						curserPosition = 0;
 					}
 				}
+				else if (e.key.keysym.sym == SDLK_UP && curserLine >= 1)
+				{
+					// if curser bigger than text above then go to end, else go to same pos but above
+					if (curserPosition > lines[curserLine - 1].size()) {
+						curserLine -= 1;
+						curserPosition = lines[curserLine].size();
+					}
+					else
+					{
+						curserLine -= 1;
+					}
+					//std::cout << "test" << std::endl;
+				}
+				else if (e.key.keysym.sym == SDLK_DOWN && curserLine < lines.size() - 1) {
+					if (curserPosition > lines[curserLine + 1].size()) {
+						curserLine += 1;
+						curserPosition = lines[curserLine].size();
+					}
+					else
+					{
+						curserLine += 1;
+					}
+				}
 				break;
 
 			case SDL_MOUSEWHEEL:
