@@ -83,18 +83,30 @@ void openFile(std::string& feedbackGutterText, bool& feedbackMode, std::string& 
 
 void runCode(std::string& feedbackGutterText, const std::string& currentFileName, bool isSaved) {
 
-	if(!isSaved) {
+	if (!isSaved) {
 		feedbackGutterText = "Save file first before running it!";
+		return;
 	}
-	else
-	{
-		if (currentFileName.empty()) {
-			feedbackGutterText = "No file to run!";
-		}
-		else {
-			std::string command = "python " + currentFileName;
-			int result = std::system(command.c_str());
-		}
+
+	if (currentFileName.empty()) {
+		feedbackGutterText = "No file to run!";
+		return;
+	}
+
+	// Construct the full path to the file
+	std::filesystem::path filePath = std::filesystem::current_path() / "NotepadMM" / currentFileName;
+	std::string fullPath = filePath.string();
+
+	// Escape or quote the path to handle special characters
+	std::string command = "python \"" + fullPath + "\"";
+
+	// Run the Python script
+	int result = std::system(command.c_str());
+	if (result != 0) {
+		feedbackGutterText = "Error running file. Check for errors.";
+	}
+	else {
+		feedbackGutterText = "File ran successfully!";
 	}
 
 }
