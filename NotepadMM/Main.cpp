@@ -49,8 +49,6 @@ void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL
 	}
 
 	if (currentFileName.size() == 0) {
-		//std::cout << "Enter file name to save as: ";
-		//std::cin >> currentFileName;
 		feedbackMode = true;
 		isEnteringFileName = true;
 		feedbackGutterText = "Enter file name: ";
@@ -70,6 +68,13 @@ void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL
 	feedbackGutterText = "File saved as: " + fullPath;
 	isSaved = true;
 	updateWindowTitle(window, currentFileName, isSaved);
+}
+
+void saveAsFile(std::vector<std::string>& lines, std::string& currentFileName, SDL_Window* window, std::string& feedbackGutterText, bool& feedbackMode, std::string& feedbackGutterOutput, bool& isEnteringFileName) {
+	feedbackMode = true;
+	isEnteringFileName = true;
+	feedbackGutterText = "Enter file name to save as: ";
+	feedbackGutterOutput = ""; // Clear any previous input
 }
 
 bool isOpeningFile = false;
@@ -325,7 +330,10 @@ int main(int argc, char* argv[]) {
 
 					// CTRL KEYS
 					bool ctrlActive = (modState & KMOD_CTRL);
-					if (ctrlActive) {
+					if (ctrlActive && (modState & KMOD_SHIFT) && e.key.keysym.sym == SDLK_s) {
+						saveAsFile(lines, currentFileName, window, feedbackGutterText, feedbackMode, feedbackGutterOutput, isEnteringFileName);
+					}
+					else if (ctrlActive) {
 						SDL_KeyCode key = static_cast<SDL_KeyCode>(e.key.keysym.sym);
 
 						// Check if the key is in the map
@@ -333,6 +341,7 @@ int main(int argc, char* argv[]) {
 							ctrlKeyActions[key](); // Call the corresponding function
 						}
 					}
+					
 
 
 
