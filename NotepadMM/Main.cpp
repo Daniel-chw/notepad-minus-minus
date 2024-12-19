@@ -19,12 +19,23 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 	SDL_Quit();
 }
 
+void updateWindowTitle(SDL_Window* window, const std::string& currentFileName, bool isSaved) {
+	std::string title = "Notepad--";
+	if (!currentFileName.empty()) {
+		title = title + "    " + currentFileName;
+		if (!isSaved) {
+			title = title + " *";
+		}
+	}
+	SDL_SetWindowTitle(window, title.c_str());
+}
 
 //  saves the current text into a file
 // if no file name then user promted for it
 // places file in a NotepadMM directory
+bool isSaved = true; // Start with a saved state
 std::string currentFileName = "";
-void saveFile(std::vector<std::string>& lines, std::string& currentFileName) {
+void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL_Window* window) {
 
 	const std::string folderName = "NotepadMM";
 
@@ -51,6 +62,9 @@ void saveFile(std::vector<std::string>& lines, std::string& currentFileName) {
 
 	currentFile.close();
 	std::cout << "File saved as: " << fullPath << std::endl;
+	isSaved = true;
+	updateWindowTitle(window, currentFileName, isSaved);
+
 }
 void openFile() {
 
@@ -166,7 +180,7 @@ int main(int argc, char* argv[]) {
 	int curserLine = 0;
 
 	std::unordered_map<SDL_KeyCode, std::function<void()>> ctrlKeyActions = {
-		{SDLK_s, [&]() { saveFile(lines, currentFileName); }},     // Ctrl+S
+		{SDLK_s, [&]() { saveFile(lines, currentFileName, window); }},     // Ctrl+S
 		{SDLK_o, openFile},     // Ctrl+O
 		{SDLK_c, copyText},     // Ctrl+C
 		{SDLK_v, [&]() { pasteText(lines, curserLine, curserPosition); }}
@@ -185,6 +199,9 @@ int main(int argc, char* argv[]) {
 				running = false;
 				break;
 			case SDL_KEYDOWN: {
+
+				isSaved = false;
+				updateWindowTitle(window, currentFileName, isSaved);
 
 				SDL_Keymod modState = SDL_GetModState();
 
