@@ -19,22 +19,38 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 	SDL_Quit();
 }
 
+
+//  saves the current text into a file
+// if no file name then user promted for it
+// places file in a NotepadMM directory
 std::string currentFileName = "";
 void saveFile(std::vector<std::string>& lines, std::string& currentFileName) {
+
+	const std::string folderName = "NotepadMM";
+
+	// Check if the folder exists, and create it if necessary
+	if (!std::filesystem::exists(folderName)) {
+		if (!std::filesystem::create_directory(folderName)) {
+			std::cerr << "Failed to create folder: " << folderName << std::endl;
+			return;
+		}
+	}
 
 	if (currentFileName.size() == 0) {
 		std::cout << "Enter file name to save as: ";
 		std::cin >> currentFileName;
 	}
 
-	std::ofstream currentFile(currentFileName);
+	std::string fullPath = folderName + "/" + currentFileName;
+
+	std::ofstream currentFile(fullPath);
 
 	for (const auto& line : lines) {
 		currentFile << line << "\n";
 	}
 
 	currentFile.close();
-
+	std::cout << "File saved as: " << fullPath << std::endl;
 }
 void openFile() {
 
