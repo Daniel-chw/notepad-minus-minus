@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <cstdlib>
 
+//cleanups up
 void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 	if (window) SDL_DestroyWindow(window);
 	if (renderer) SDL_DestroyRenderer(renderer);
@@ -20,6 +21,8 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 	SDL_Quit();
 }
 
+
+// updates the window title by adding a star when ever called
 void updateWindowTitle(SDL_Window* window, const std::string& currentFileName, bool isSaved) {
 	std::string title = "Notepad--";
 	if (!currentFileName.empty()) {
@@ -31,7 +34,8 @@ void updateWindowTitle(SDL_Window* window, const std::string& currentFileName, b
 	SDL_SetWindowTitle(window, title.c_str());
 }
 
-//  saves the current text into a file
+
+// saves the current text into a file
 // if no file name then user promted for it
 // places file in a NotepadMM directory
 bool isSaved = true; // Start with a saved state
@@ -70,6 +74,9 @@ void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL
 	updateWindowTitle(window, currentFileName, isSaved);
 }
 
+
+// asks user to enter name for file
+// the rest of save as is handled in update code where ctrl+shift+s is pressed
 void saveAsFile(std::vector<std::string>& lines, std::string& currentFileName, SDL_Window* window, std::string& feedbackGutterText, bool& feedbackMode, std::string& feedbackGutterOutput, bool& isEnteringFileName) {
 	feedbackMode = true;
 	isEnteringFileName = true;
@@ -77,6 +84,8 @@ void saveAsFile(std::vector<std::string>& lines, std::string& currentFileName, S
 	feedbackGutterOutput = ""; // Clear any previous input
 }
 
+
+// asks user to enter name of file to open
 bool isOpeningFile = false;
 void openFile(std::string& feedbackGutterText, bool& feedbackMode, std::string& feedbackGutterOutput) {
 	feedbackMode = true;
@@ -85,7 +94,7 @@ void openFile(std::string& feedbackGutterText, bool& feedbackMode, std::string& 
 	feedbackGutterOutput = "";
 }
 
-
+// runs command in terminal to run python code
 void runCode(std::string& feedbackGutterText, const std::string& currentFileName, bool isSaved) {
 
 	if (!isSaved) {
@@ -115,6 +124,9 @@ void runCode(std::string& feedbackGutterText, const std::string& currentFileName
 	}
 
 }
+
+
+// for each line in paste, adds this to each line in lines
 void pasteText(std::vector<std::string>& lines, int& curserLine, int& curserPosition) {
 
 	char* clipboardText = SDL_GetClipboardText();
@@ -127,6 +139,8 @@ void pasteText(std::vector<std::string>& lines, int& curserLine, int& curserPosi
 
 }
 
+
+// main code
 int main(int argc, char* argv[]) {
 
 	SDL_Init(SDL_INIT_EVERYTHING);
@@ -140,6 +154,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
+	// Creates icon
 	SDL_Surface* iconSurface = SDL_LoadBMP("NotepadMMIcon.bmp");
 	if (!iconSurface) {
 		std::cerr << "Failed to load icon! Error: " << SDL_GetError() << std::endl;
@@ -149,8 +164,7 @@ int main(int argc, char* argv[]) {
 		SDL_FreeSurface(iconSurface); // Free the surface after setting it as an icon
 	}
 
-
-
+	// creates renderer
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	if (!renderer) {
 		std::cout << "Failed to create renderer! Error: " << SDL_GetError() << std::endl;
@@ -173,9 +187,10 @@ int main(int argc, char* argv[]) {
 	SDL_Texture* textTexture = nullptr;
 
 
-	// MAIN LOOP
+	//----------------------- MAIN LOOP -----------------------------
 
 
+	// vars for shift-[n] function
 	std::unordered_map<SDL_KeyCode, char> shiftSymbols = {
 		{SDLK_1, '!'},
 		{SDLK_2, '"'},
@@ -203,34 +218,42 @@ int main(int argc, char* argv[]) {
 	};
 	bool shiftActive = false;
 
+	// vars for scrolling
 	int scrollOffsetY = 0;
 	int scrollOffsetX = 0;
 	int yOffset;
 	int scrollSpeed = 50;
 
+	// vars for gutter
 	int gutterWidth = 30;
 	int gutterIncreaseCorrection = 0;
 
+	// vars for feedback gutter
 	std::string feedbackGutterText = " ";
 	bool feedbackMode = false;
 	bool isEnteringFileName = false;
 	std::string feedbackGutterOutput;
 
+	// vars for vector to hold all text in document
 	std::vector<std::string> lines = {""};
 	int lineSpacing = 0;
 	int maxWidth = 570-gutterWidth;
 
+	// vars for curser
 	bool curserVisible = true;
 	int curserPosition = 0;
 	int curserLine = 0;
 
+	// vars for ctrl-[n] functions
 	std::unordered_map<SDL_KeyCode, std::function<void()>> ctrlKeyActions = {
-		{SDLK_s, [&]() { saveFile(lines, currentFileName, window, feedbackGutterText, feedbackMode, feedbackGutterOutput, isEnteringFileName); }},     // Ctrl+S
-		{SDLK_o, [&]() { openFile(feedbackGutterText, feedbackMode, feedbackGutterOutput); }},     // Ctrl+O
-		{SDLK_r, [&]() { runCode(feedbackGutterText, currentFileName, isSaved); }},     // Ctrl+C
+		{SDLK_s, [&]() { saveFile(lines, currentFileName, window, feedbackGutterText, feedbackMode, feedbackGutterOutput, isEnteringFileName); }},
+		{SDLK_o, [&]() { openFile(feedbackGutterText, feedbackMode, feedbackGutterOutput); }},     
+		{SDLK_r, [&]() { runCode(feedbackGutterText, currentFileName, isSaved); }},    
 		{SDLK_v, [&]() { pasteText(lines, curserLine, curserPosition); }}
 	};
 
+
+	// running loop
 	bool running = true;
 	SDL_Event e;
 	while (running) {
@@ -238,15 +261,21 @@ int main(int argc, char* argv[]) {
 		int lineHeight = TTF_FontHeight(font);
 		int maxContentHeight = lines.size() * lineHeight;
 
+		// checks each periphal given to see if user input is given
 		while (SDL_PollEvent(&e)) {
 			switch (e.type) {
+			
+			// when window closed
 			case SDL_QUIT:
 				running = false;
 				break;
+
+			// when any key is pressed down
 			case SDL_KEYDOWN: {
 
 				SDL_Keymod modState = SDL_GetModState();
 
+				// handles user typing into feedback gutter
 				if (feedbackMode) {
 					// Append user input to feedbackGutterOutput
 					if (e.key.keysym.sym >= SDLK_SPACE && e.key.keysym.sym <= SDLK_z) {
@@ -309,8 +338,9 @@ int main(int argc, char* argv[]) {
 						}
 					}
 				}
+				
+				// handles user typing into main text area
 				else {
-					// Normal text editing logic (existing code)
 					
 					updateWindowTitle(window, currentFileName, isSaved);
 
@@ -342,9 +372,6 @@ int main(int argc, char* argv[]) {
 						}
 					}
 					
-
-
-
 					// CHARS
 					// If any key is pressed, convert that to a string and concat that with initial text
 
@@ -439,6 +466,7 @@ int main(int argc, char* argv[]) {
 				break;
 			}
 
+			// when scroll wheel moved
 			case SDL_MOUSEWHEEL:
 				// Check if Shift is pressed
 				shiftActive = (SDL_GetModState() & KMOD_SHIFT);
@@ -448,7 +476,7 @@ int main(int argc, char* argv[]) {
 
 				if (e.wheel.y > 0) {
 					if (shiftActive) {
-						scrollOffsetX -= scrollSpeed/2;
+						scrollOffsetX -= scrollSpeed/2; // horizontal scroll
 					}
 					else {
 						scrollOffsetY += scrollSpeed; // Regular Scroll Up
@@ -456,7 +484,7 @@ int main(int argc, char* argv[]) {
 				}
 				else if (e.wheel.y < 0) {
 					if (shiftActive) {
-						scrollOffsetX += scrollSpeed/2;
+						scrollOffsetX += scrollSpeed/2; // horizontal scroll
 					}
 					else {
 						scrollOffsetY -= scrollSpeed; // Regular Scroll Down
@@ -477,7 +505,6 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		//std::cout << curserPosition << ", " << lines.back().size() << std::endl;
 
 		// draws background
 		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -485,7 +512,6 @@ int main(int argc, char* argv[]) {
 
 
 		// draws char on each line of vector
-
 		int yOffset = 10 + scrollOffsetY; 
 		for (int i = 0; i < lines.size(); ++i) {
 			const std::string& line = lines[i];
