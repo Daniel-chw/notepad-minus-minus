@@ -9,6 +9,7 @@
 #include <functional>
 #include <fstream>
 #include <filesystem>
+#include <cstdlib>
 
 void cleanup(SDL_Window* window, SDL_Renderer* renderer, TTF_Font* font) {
 	if (window) SDL_DestroyWindow(window);
@@ -69,23 +70,32 @@ void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL
 	feedbackGutterText = "File saved as: " + fullPath;
 	isSaved = true;
 	updateWindowTitle(window, currentFileName, isSaved);
-
 }
 
 bool isOpeningFile = false;
 void openFile(std::string& feedbackGutterText, bool& feedbackMode, std::string& feedbackGutterOutput) {
-
 	feedbackMode = true;
 	isOpeningFile = true;
 	feedbackGutterText = "Enter file name to open: ";
 	feedbackGutterOutput = "";
-
 }
 
 
-void copyText() {
+void runCode(std::string& feedbackGutterText, const std::string& currentFileName, bool isSaved) {
 
-	std::cout << "c" << std::endl;
+	if(!isSaved) {
+		feedbackGutterText = "Save file first before running it!";
+	}
+	else
+	{
+		if (currentFileName.empty()) {
+			feedbackGutterText = "No file to run!";
+		}
+		else {
+			std::string command = "python " + currentFileName;
+			int result = std::system(command.c_str());
+		}
+	}
 
 }
 void pasteText(std::vector<std::string>& lines, int& curserLine, int& curserPosition) {
@@ -200,7 +210,7 @@ int main(int argc, char* argv[]) {
 	std::unordered_map<SDL_KeyCode, std::function<void()>> ctrlKeyActions = {
 		{SDLK_s, [&]() { saveFile(lines, currentFileName, window, feedbackGutterText, feedbackMode, feedbackGutterOutput, isEnteringFileName); }},     // Ctrl+S
 		{SDLK_o, [&]() { openFile(feedbackGutterText, feedbackMode, feedbackGutterOutput); }},     // Ctrl+O
-		{SDLK_c, copyText},     // Ctrl+C
+		{SDLK_r, [&]() { runCode(feedbackGutterText, currentFileName, isSaved); }},     // Ctrl+C
 		{SDLK_v, [&]() { pasteText(lines, curserLine, curserPosition); }}
 	};
 
@@ -266,7 +276,10 @@ int main(int argc, char* argv[]) {
 								}
 								inputFile.close();
 
-								currentFileName = feedbackGutterOutput;
+								// Extract file name from the full path
+								std::filesystem::path filePath(feedbackGutterOutput);
+								currentFileName = filePath.filename().string(); // Store only the file name
+
 								feedbackGutterText = "File loaded successfully!";
 								updateWindowTitle(window, currentFileName, true); // Update window title
 							}
@@ -281,7 +294,7 @@ int main(int argc, char* argv[]) {
 				}
 				else {
 					// Normal text editing logic (existing code)
-					isSaved = false;
+					
 					updateWindowTitle(window, currentFileName, isSaved);
 
 					feedbackGutterText.clear();
@@ -317,6 +330,7 @@ int main(int argc, char* argv[]) {
 					else if (e.key.keysym.sym >= SDLK_SPACE && e.key.keysym.sym <= SDLK_z) {
 
 						feedbackGutterOutput = "";
+						isSaved = false;
 
 						// appends letter to last line
 						char keyPressed = static_cast<char>(e.key.keysym.sym);
