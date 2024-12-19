@@ -71,11 +71,18 @@ void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL
 	updateWindowTitle(window, currentFileName, isSaved);
 
 }
-void openFile() {
 
-	std::cout << "o" << std::endl;
+bool isOpeningFile = false;
+void openFile(std::string& feedbackGutterText, bool& feedbackMode, std::string& feedbackGutterOutput) {
+
+	feedbackMode = true;
+	isOpeningFile = true;
+	feedbackGutterText = "Enter file name to open: ";
+	feedbackGutterOutput = "";
 
 }
+
+
 void copyText() {
 
 	std::cout << "c" << std::endl;
@@ -192,7 +199,7 @@ int main(int argc, char* argv[]) {
 
 	std::unordered_map<SDL_KeyCode, std::function<void()>> ctrlKeyActions = {
 		{SDLK_s, [&]() { saveFile(lines, currentFileName, window, feedbackGutterText, feedbackMode, feedbackGutterOutput, isEnteringFileName); }},     // Ctrl+S
-		{SDLK_o, openFile},     // Ctrl+O
+		{SDLK_o, [&]() { openFile(feedbackGutterText, feedbackMode, feedbackGutterOutput); }},     // Ctrl+O
 		{SDLK_c, copyText},     // Ctrl+C
 		{SDLK_v, [&]() { pasteText(lines, curserLine, curserPosition); }}
 	};
@@ -246,6 +253,29 @@ int main(int argc, char* argv[]) {
 							feedbackGutterText = "";
 
 							saveFile(lines, currentFileName, window, feedbackGutterText, feedbackMode, feedbackGutterOutput, isEnteringFileName);
+						}
+
+						if (isOpeningFile) {
+
+							std::ifstream inputFile(feedbackGutterOutput);
+							if (inputFile.is_open()) {
+								lines.clear(); // Clear current lines
+								std::string line;
+								while (std::getline(inputFile, line)) {
+									lines.push_back(line);
+								}
+								inputFile.close();
+
+								currentFileName = feedbackGutterOutput;
+								feedbackGutterText = "File loaded successfully!";
+								updateWindowTitle(window, currentFileName, true); // Update window title
+							}
+							else {
+								feedbackGutterText = "Error: Could not open file.";
+							}
+							feedbackMode = false;
+							isOpeningFile = false;
+
 						}
 					}
 				}
