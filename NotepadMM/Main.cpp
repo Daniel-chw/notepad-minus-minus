@@ -35,14 +35,14 @@ void updateWindowTitle(SDL_Window* window, const std::string& currentFileName, b
 // places file in a NotepadMM directory
 bool isSaved = true; // Start with a saved state
 std::string currentFileName = "";
-void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL_Window* window) {
+void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL_Window* window, std::string& feedbackGutterText) {
 
 	const std::string folderName = "NotepadMM";
 
 	// Check if the folder exists, and create it if necessary
 	if (!std::filesystem::exists(folderName)) {
 		if (!std::filesystem::create_directory(folderName)) {
-			std::cerr << "Failed to create folder: " << folderName << std::endl;
+			feedbackGutterText = "Error: Failed to create folder: " + folderName;
 			return;
 		}
 	}
@@ -61,7 +61,7 @@ void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL
 	}
 
 	currentFile.close();
-	std::cout << "File saved as: " << fullPath << std::endl;
+	feedbackGutterText = "File saved as: " + fullPath;
 	isSaved = true;
 	updateWindowTitle(window, currentFileName, isSaved);
 
@@ -130,6 +130,7 @@ int main(int argc, char* argv[]) {
 	}
 	SDL_Color green = { 0, 0, 255, 255 };
 	SDL_Color gutterGrey = { 150, 150, 150, 255 };
+	SDL_Color feedbackGutterRed = {220,20,60,255};
 	SDL_Texture* textTexture = nullptr;
 
 
@@ -171,6 +172,10 @@ int main(int argc, char* argv[]) {
 	int gutterWidth = 30;
 	int gutterIncreaseCorrection = 0;
 
+	std::string feedbackGutterText = " ";
+	bool feedbackMode = true;
+	std::string feedbackGutterOutput;
+
 	std::vector<std::string> lines = {""};
 	int lineSpacing = 0;
 	int maxWidth = 570-gutterWidth;
@@ -180,7 +185,7 @@ int main(int argc, char* argv[]) {
 	int curserLine = 0;
 
 	std::unordered_map<SDL_KeyCode, std::function<void()>> ctrlKeyActions = {
-		{SDLK_s, [&]() { saveFile(lines, currentFileName, window); }},     // Ctrl+S
+		{SDLK_s, [&]() { saveFile(lines, currentFileName, window, feedbackGutterText); }},     // Ctrl+S
 		{SDLK_o, openFile},     // Ctrl+O
 		{SDLK_c, copyText},     // Ctrl+C
 		{SDLK_v, [&]() { pasteText(lines, curserLine, curserPosition); }}
@@ -200,122 +205,149 @@ int main(int argc, char* argv[]) {
 				break;
 			case SDL_KEYDOWN: {
 
-				isSaved = false;
-				updateWindowTitle(window, currentFileName, isSaved);
-
 				SDL_Keymod modState = SDL_GetModState();
 
-				// RETURN AND TAB
+				if (feedbackMode) {
+					// Append user input to feedbackGutterOutput
+					if (e.key.keysym.sym >= SDLK_SPACE && e.key.keysym.sym <= SDLK_z) {
+						char keyPressed = static_cast<char>(e.key.keysym.sym);
 
-				if (e.key.keysym.sym == SDLK_RETURN) {
-					curserLine += 1;
-					curserPosition = 0;
-					lines.insert(lines.begin() + curserLine, ""); // Insert a new line at the cursor line
-				}
-				else if (e.key.keysym.sym == SDLK_TAB) {
-					lines[curserLine].insert(curserPosition, "    ");
-					curserPosition += 4;
-				}
+						// Handle Shift or Caps Lock for upper case
+						bool shiftActive = (modState & KMOD_SHIFT);
+						bool capsActive = (modState & KMOD_CAPS);
 
+						if ((shiftActive ^ capsActive) && keyPressed >= 'a' && keyPressed <= 'z') {
+							keyPressed -= 32; // Convert to uppercase
+						}
 
-				// CTRL KEYS
-				bool ctrlActive = (modState & KMOD_CTRL);
-				if (ctrlActive) {
-					SDL_KeyCode key = static_cast<SDL_KeyCode>(e.key.keysym.sym);
+						feedbackGutterOutput += keyPressed; // Append character
+						feedbackGutterText = feedbackGutterOutput; // Update feedback gutter
+					}
 
-					// Check if the key is in the map
-					if (ctrlKeyActions.find(key) != ctrlKeyActions.end()) {
-						ctrlKeyActions[key](); // Call the corresponding function
+					// Handle backspace for feedbackMode
+					else if (e.key.keysym.sym == SDLK_BACKSPACE) {
+						if (!feedbackGutterOutput.empty()) {
+							feedbackGutterOutput.pop_back(); // Remove last character
+							feedbackGutterText = feedbackGutterOutput; // Update feedback gutter
+						}
 					}
 				}
+				else {
+					// Normal text editing logic (existing code)
+					isSaved = false;
+					updateWindowTitle(window, currentFileName, isSaved);
 
-
-
-				// CHARS
-				// If any key is pressed, convert that to a string and concat that with initial text
-
-				else if (e.key.keysym.sym >= SDLK_SPACE && e.key.keysym.sym <= SDLK_z) {
-
-					// appends letter to last line
-					char keyPressed = static_cast<char>(e.key.keysym.sym);
-
-					// Check if Shift or Caps Lock is active
-					shiftActive = (modState & KMOD_SHIFT);
-					bool capsActive = (modState & KMOD_CAPS);
-
-					// Shift Chars
-					if (shiftActive && shiftSymbols.find(static_cast<SDL_KeyCode>(e.key.keysym.sym)) != shiftSymbols.end()) {
-						keyPressed = shiftSymbols[static_cast<SDL_KeyCode>(e.key.keysym.sym)];
-					}
-					// Upper Case
-					if ((shiftActive ^ capsActive) && keyPressed >= 'a' && keyPressed <= 'z') {
-						keyPressed -= 32;
-					}
-
-					lines[curserLine].insert(curserPosition, 1, keyPressed);
-					curserPosition += 1;
-
-				}
-
-				// Handles deleting letters
-				else if (e.key.keysym.sym == SDLK_BACKSPACE) {
-					if (curserPosition > 0) {
-						// Remove a character from the current line
-						lines[curserLine].erase(curserPosition - 1, 1);
-						curserPosition -= 1;
-					}
-					else if (curserLine > 0) {
-						// Merge the current line with the previous line
-						curserPosition = lines[curserLine - 1].size();
-						lines[curserLine - 1] += lines[curserLine];
-						lines.erase(lines.begin() + curserLine);
-						curserLine -= 1;
-					}
-				}
-
-
-				// Handles moving cursor
-				else if (e.key.keysym.sym == SDLK_LEFT) {
-					if (curserPosition >= 1) {
-						curserPosition -= 1;
-					}
-					else if (curserLine >= 1)
-					{
-						curserLine -= 1;
-						curserPosition = lines[curserLine].size();
-					}
-				}
-				else if (e.key.keysym.sym == SDLK_RIGHT) {
-					if (curserPosition < lines[curserLine].size()) {
-						curserPosition += 1;
-					}
-					else if (curserLine < lines.size() - 1)
-					{
+					// RETURN AND TAB
+					if (e.key.keysym.sym == SDLK_RETURN) {
 						curserLine += 1;
 						curserPosition = 0;
+						lines.insert(lines.begin() + curserLine, ""); // Insert a new line at the cursor line
 					}
-				}
-				else if (e.key.keysym.sym == SDLK_UP && curserLine >= 1)
-				{
-					// if curser bigger than text above then go to end, else go to same pos but above
-					if (curserPosition > lines[curserLine - 1].size()) {
-						curserLine -= 1;
-						curserPosition = lines[curserLine].size();
+					else if (e.key.keysym.sym == SDLK_TAB) {
+						lines[curserLine].insert(curserPosition, "    ");
+						curserPosition += 4;
 					}
-					else
+
+
+					// CTRL KEYS
+					bool ctrlActive = (modState & KMOD_CTRL);
+					if (ctrlActive) {
+						SDL_KeyCode key = static_cast<SDL_KeyCode>(e.key.keysym.sym);
+
+						// Check if the key is in the map
+						if (ctrlKeyActions.find(key) != ctrlKeyActions.end()) {
+							ctrlKeyActions[key](); // Call the corresponding function
+						}
+					}
+
+
+
+					// CHARS
+					// If any key is pressed, convert that to a string and concat that with initial text
+
+					else if (e.key.keysym.sym >= SDLK_SPACE && e.key.keysym.sym <= SDLK_z) {
+
+						// appends letter to last line
+						char keyPressed = static_cast<char>(e.key.keysym.sym);
+
+						// Check if Shift or Caps Lock is active
+						shiftActive = (modState & KMOD_SHIFT);
+						bool capsActive = (modState & KMOD_CAPS);
+
+						// Shift Chars
+						if (shiftActive && shiftSymbols.find(static_cast<SDL_KeyCode>(e.key.keysym.sym)) != shiftSymbols.end()) {
+							keyPressed = shiftSymbols[static_cast<SDL_KeyCode>(e.key.keysym.sym)];
+						}
+						// Upper Case
+						if ((shiftActive ^ capsActive) && keyPressed >= 'a' && keyPressed <= 'z') {
+							keyPressed -= 32;
+						}
+
+						lines[curserLine].insert(curserPosition, 1, keyPressed);
+						curserPosition += 1;
+
+					}
+
+					// Handles deleting letters
+					else if (e.key.keysym.sym == SDLK_BACKSPACE) {
+						if (curserPosition > 0) {
+							// Remove a character from the current line
+							lines[curserLine].erase(curserPosition - 1, 1);
+							curserPosition -= 1;
+						}
+						else if (curserLine > 0) {
+							// Merge the current line with the previous line
+							curserPosition = lines[curserLine - 1].size();
+							lines[curserLine - 1] += lines[curserLine];
+							lines.erase(lines.begin() + curserLine);
+							curserLine -= 1;
+						}
+					}
+
+
+					// Handles moving cursor
+					else if (e.key.keysym.sym == SDLK_LEFT) {
+						if (curserPosition >= 1) {
+							curserPosition -= 1;
+						}
+						else if (curserLine >= 1)
+						{
+							curserLine -= 1;
+							curserPosition = lines[curserLine].size();
+						}
+					}
+					else if (e.key.keysym.sym == SDLK_RIGHT) {
+						if (curserPosition < lines[curserLine].size()) {
+							curserPosition += 1;
+						}
+						else if (curserLine < lines.size() - 1)
+						{
+							curserLine += 1;
+							curserPosition = 0;
+						}
+					}
+					else if (e.key.keysym.sym == SDLK_UP && curserLine >= 1)
 					{
-						curserLine -= 1;
+						// if curser bigger than text above then go to end, else go to same pos but above
+						if (curserPosition > lines[curserLine - 1].size()) {
+							curserLine -= 1;
+							curserPosition = lines[curserLine].size();
+						}
+						else
+						{
+							curserLine -= 1;
+						}
+						//std::cout << "test" << std::endl;
 					}
-					//std::cout << "test" << std::endl;
-				}
-				else if (e.key.keysym.sym == SDLK_DOWN && curserLine < lines.size() - 1) {
-					if (curserPosition > lines[curserLine + 1].size()) {
-						curserLine += 1;
-						curserPosition = lines[curserLine].size();
-					}
-					else
-					{
-						curserLine += 1;
+					else if (e.key.keysym.sym == SDLK_DOWN && curserLine < lines.size() - 1) {
+						if (curserPosition > lines[curserLine + 1].size()) {
+							curserLine += 1;
+							curserPosition = lines[curserLine].size();
+						}
+						else
+						{
+							curserLine += 1;
+						}
 					}
 				}
 				break;
@@ -405,7 +437,8 @@ int main(int argc, char* argv[]) {
 		if (curserPosition > 0 && !lines[curserLine].empty()) {
 			TTF_SizeText(font, lines[curserLine].substr(0, curserPosition).c_str(), &cursorX, nullptr);
 		}
-
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_RenderDrawLine(renderer, 10 + gutterWidth + scrollOffsetX + cursorX, cursorY, 10 + gutterWidth + scrollOffsetX + cursorX, cursorY + lineHeight);
 
 		// draws gutter
 		SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255); // Light gray
@@ -428,11 +461,26 @@ int main(int argc, char* argv[]) {
 			SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
 		}
 
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-		SDL_RenderDrawLine(renderer, 10 + gutterWidth + scrollOffsetX + cursorX,cursorY, 10 + gutterWidth + scrollOffsetX + cursorX, cursorY + lineHeight);
 
+		// feedback gutter
+		SDL_SetRenderDrawColor(renderer, 220, 220, 220, 255); // Lighter gray
+		SDL_Rect feedbackGutterRect = { 0,400 - gutterWidth, 600, 400};
+		SDL_RenderFillRect(renderer, &feedbackGutterRect);
 
-		// updates screen
+		// feedback gutter text
+		if (!feedbackGutterText.empty()) {
+			int textWidth, textHeight;
+			TTF_SizeText(font, feedbackGutterText.c_str(), &textWidth, &textHeight);
+
+			SDL_Surface* textSurface = TTF_RenderText_Blended(font, feedbackGutterText.c_str(), feedbackGutterRed);
+			SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+			SDL_Rect textRect = { 10, 400 - gutterWidth + (gutterWidth - textHeight) / 2,textSurface->w, textSurface->h };
+			SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
+
+			SDL_FreeSurface(textSurface);
+			SDL_DestroyTexture(textTexture);
+		}
+
 		SDL_RenderPresent(renderer);
 	}
 
