@@ -35,7 +35,7 @@ void updateWindowTitle(SDL_Window* window, const std::string& currentFileName, b
 // places file in a NotepadMM directory
 bool isSaved = true; // Start with a saved state
 std::string currentFileName = "";
-void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL_Window* window, std::string& feedbackGutterText) {
+void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL_Window* window, std::string& feedbackGutterText, bool& feedbackMode, std::string& feedbackGutterOutput, bool& isEnteringFileName) {
 
 	const std::string folderName = "NotepadMM";
 
@@ -48,8 +48,13 @@ void saveFile(std::vector<std::string>& lines, std::string& currentFileName, SDL
 	}
 
 	if (currentFileName.size() == 0) {
-		std::cout << "Enter file name to save as: ";
-		std::cin >> currentFileName;
+		//std::cout << "Enter file name to save as: ";
+		//std::cin >> currentFileName;
+		feedbackMode = true;
+		isEnteringFileName = true;
+		feedbackGutterText = "Enter file name: ";
+		feedbackGutterOutput = ""; // Clear any previous input
+		return; // File save will resume after file name is entered
 	}
 
 	std::string fullPath = folderName + "/" + currentFileName;
@@ -173,7 +178,8 @@ int main(int argc, char* argv[]) {
 	int gutterIncreaseCorrection = 0;
 
 	std::string feedbackGutterText = " ";
-	bool feedbackMode = true;
+	bool feedbackMode = false;
+	bool isEnteringFileName = false;
 	std::string feedbackGutterOutput;
 
 	std::vector<std::string> lines = {""};
@@ -185,7 +191,7 @@ int main(int argc, char* argv[]) {
 	int curserLine = 0;
 
 	std::unordered_map<SDL_KeyCode, std::function<void()>> ctrlKeyActions = {
-		{SDLK_s, [&]() { saveFile(lines, currentFileName, window, feedbackGutterText); }},     // Ctrl+S
+		{SDLK_s, [&]() { saveFile(lines, currentFileName, window, feedbackGutterText, feedbackMode, feedbackGutterOutput, isEnteringFileName); }},     // Ctrl+S
 		{SDLK_o, openFile},     // Ctrl+O
 		{SDLK_c, copyText},     // Ctrl+C
 		{SDLK_v, [&]() { pasteText(lines, curserLine, curserPosition); }}
@@ -221,14 +227,25 @@ int main(int argc, char* argv[]) {
 						}
 
 						feedbackGutterOutput += keyPressed; // Append character
-						feedbackGutterText = feedbackGutterOutput; // Update feedback gutter
+						feedbackGutterText += keyPressed; // Update feedback gutter
 					}
 
 					// Handle backspace for feedbackMode
 					else if (e.key.keysym.sym == SDLK_BACKSPACE) {
 						if (!feedbackGutterOutput.empty()) {
 							feedbackGutterOutput.pop_back(); // Remove last character
-							feedbackGutterText = feedbackGutterOutput; // Update feedback gutter
+							feedbackGutterText.pop_back(); // Update feedback gutter
+						}
+					}
+					else if (e.key.keysym.sym == SDLK_RETURN)
+					{
+						if (isEnteringFileName) {
+							currentFileName = feedbackGutterOutput;
+							isEnteringFileName = false;
+							feedbackMode = false;
+							feedbackGutterText = "";
+
+							saveFile(lines, currentFileName, window, feedbackGutterText, feedbackMode, feedbackGutterOutput, isEnteringFileName);
 						}
 					}
 				}
@@ -236,6 +253,8 @@ int main(int argc, char* argv[]) {
 					// Normal text editing logic (existing code)
 					isSaved = false;
 					updateWindowTitle(window, currentFileName, isSaved);
+
+					feedbackGutterText.clear();
 
 					// RETURN AND TAB
 					if (e.key.keysym.sym == SDLK_RETURN) {
@@ -266,6 +285,8 @@ int main(int argc, char* argv[]) {
 					// If any key is pressed, convert that to a string and concat that with initial text
 
 					else if (e.key.keysym.sym >= SDLK_SPACE && e.key.keysym.sym <= SDLK_z) {
+
+						feedbackGutterOutput = "";
 
 						// appends letter to last line
 						char keyPressed = static_cast<char>(e.key.keysym.sym);
