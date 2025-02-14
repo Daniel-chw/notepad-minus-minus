@@ -2,7 +2,7 @@
 
 ---
 
-Notepad-- is a simple text editor built using C++ and SDL2 which includes features such as saveing and opening files, multiline GUI, running code and a feedback window.
+Notepad-- is a simple text editor built using C++ and SDL2 which includes features such as saving and opening files, multiline GUI, running code and a feedback window.
 
 # Controls and Hotkeys
 
